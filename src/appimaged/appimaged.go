@@ -39,8 +39,10 @@ var verbosePtr = flag.Bool("v", false, "Print verbose log messages")
 // TODO: Instead of overwriting the desktop files and getting all
 // information from AppImages (slow), we could just rewrite the path to this
 // program in all desktop files. That should be much faster.
-var overwritePtr = flag.Bool("o", false, "Overwrite existing desktop integration files (slower)")
-var cleanPtr = flag.Bool("c", true, "Clean pre-existing desktop files")
+var (
+	overwritePtr = flag.Bool("o", false, "Overwrite existing desktop integration files (slower)")
+	cleanPtr     = flag.Bool("c", true, "Clean pre-existing desktop files")
+)
 
 var quietPtr = flag.Bool("q", false, "Do not send desktop notifications")
 
@@ -73,18 +75,18 @@ var commit string
 
 var watchedDirectories []string
 
-var home, _ = os.UserHomeDir()
-var candidateDirectories = append(
-	strings.Split(os.Getenv("PATH"), ":"),
-	[]string{
-		xdg.UserDirs.Download,
-		xdg.UserDirs.Desktop,
-		home + "/.local/bin",
-		home + "/bin",
-		home + "/Applications",
-		"/opt",
-		"/usr/local/bin",
-	}...,
+var (
+	home, _              = os.UserHomeDir()
+	candidateDirectories = append(
+		strings.Split(os.Getenv("PATH"), ":"),
+		[]string{
+			home + "/.local/bin",
+			home + "/bin",
+			home + "/Applications",
+			"/opt",
+			"/usr/local/bin",
+		}...,
+	)
 )
 
 func main() {
@@ -127,14 +129,14 @@ func main() {
 
 	checkPrerequisites()
 
-	setupToRunThroughSystemd()
+	go setupToRunThroughSystemd()
 	// fmt.Println("Setting as autostart...")
 	// setMyselfAsAutostart()
 
 	// Watch the filesystem for accesses using fanotify
 	// FANotifyMonitor() // fanotifymonitor error: operation not permitted
 
-	installFilemanagerContextMenus()
+	go installFilemanagerContextMenus()
 
 	// ptrue := true // Nasty trick from https://code-review.googlesource.com/c/gocloud/+/26730/3/bigquery/query.go
 	// overwritePtr = &ptrue
@@ -182,7 +184,7 @@ func main() {
 	// 	}
 	// }
 
-	//Start listening for menu update request
+	// Start listening for menu update request
 	var updateMenuTimer *time.Timer
 	go func() {
 		// Handles application menu updates.
@@ -235,7 +237,6 @@ func main() {
 	}()
 
 	<-quit
-
 }
 
 // checkMQTTConnected checks whether the MQTT client is
@@ -273,7 +274,6 @@ func updateMenu() error {
 				helpers.LogError("main: "+updateMenuCommand, err)
 			}
 		}
-
 	}
 
 	// Run update-desktop-database
