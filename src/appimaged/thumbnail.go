@@ -32,6 +32,8 @@ var ThumbnailsDirNormal = filepath.Join(xdg.CacheHome, "thumbnails/normal")
 //go:embed embed/appimage.png
 var defaultIcon []byte
 
+var IconDir string = filepath.Join(xdg.DataHome, "icons", "AppIcons")
+
 // Tries to get .DirIcon or the desktop's icon (in that order). If a failure, return generic icon.
 func (ai AppImage) getThumbnailOrIcon() (out []byte) {
 	fallback := defaultIcon
@@ -169,6 +171,63 @@ func (ai AppImage) extractDirIconAsThumbnail() error {
 	// err = os.Chtimes(ai.path, now, now)
 	// printError("thumbnail", err)
 	// cmd = exec.Command("touch", ai.thumbnailfilepath)
+	return nil
+}
+
+func (ai AppImage) extractThumbnailAndTurnIcon() error {
+	if ai.Type() < 0 {
+		return errors.New("not an appimage")
+	}
+
+	var err error
+	iconBuf := ai.getThumbnailOrIcon()
+	if issvg.Is(iconBuf) {
+		log.Println("thumbnail: .DirIcon in", ai.Path, "is an SVG, this is discouraged. Converting it now")
+		iconBuf, err = convertToPng(iconBuf)
+		if err != nil {
+			helpers.LogError("thumbnail", err)
+			iconBuf = defaultIcon
+		}
+	}
+
+	if !helpers.CheckMagicAtOffsetBytes(iconBuf, "504e47", 1) {
+		log.Println("thumbnail: Not a PNG file, using generic icon")
+		iconBuf = defaultIcon
+	}
+
+	out, err := pngembed.Embed(iconBuf, "Thumb::URI", ai.uri)
+	helpers.LogError("thumbnail", err)
+	if err == nil {
+		iconBuf = out
+	}
+
+	if appImageInfo, e := os.Stat(ai.Path); e == nil {
+		out, err = pngembed.Embed(iconBuf, "Thumb::MTime", appImageInfo.ModTime())
+		if err != nil {
+			helpers.LogError("thumbnail", err)
+		} else {
+			iconBuf = out
+		}
+	}
+
+	helpers.LogError("thumbnail", err)
+
+	err = os.MkdirAll(IconDir, os.ModePerm)
+	helpers.LogError("thumbnail", err)
+	if err != nil {
+		return err
+	}
+
+	iconPath := filepath.Join(IconDir, fmt.Sprintf("%s.png", filepath.Base(ai.Path)))
+	if *verbosePtr {
+		log.Println("thumbnail: Writing icon to", iconPath)
+	}
+	err = os.WriteFile(iconPath, iconBuf, 0600)
+	helpers.LogError("thumbnail", err)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
