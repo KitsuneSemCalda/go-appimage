@@ -5,15 +5,14 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
-	"net/url"
-
-	"gopkg.in/ini.v1"
-
 	"log"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gopkg.in/ini.v1"
 
 	"github.com/adrg/xdg"
 	"github.com/probonopd/go-appimage/internal/helpers"
@@ -96,7 +95,6 @@ func (ai AppImage) Validate() error {
 
 // Do not call this directly. Instead, call AddIntegration
 func (ai AppImage) _integrate() error {
-
 	// log.Println("integrate called on:", ai.path)
 
 	// Return immediately if the filename extension is not .AppImage or .app
@@ -164,6 +162,7 @@ func (ai AppImage) _integrate() error {
 	}
 	// }
 
+	ai.extractThumbnailAndTurnIcon()
 	return ai.extractDirIconAsThumbnail() // Do not run with "go" as it would interfere with writeDesktopFile
 }
 
@@ -177,7 +176,6 @@ func (ai AppImage) _unintegrate() {
 	if ai.updateinformation != "" {
 		go UnSubscribeMQTT(MQTTclient, ai.updateinformation)
 	}
-
 }
 
 // IntegrateOrUnintegrate integrates or unintegrates
@@ -264,7 +262,7 @@ func FindAppImagesWithMatchingUpdateInformation(updateinformation string) []stri
 			}
 			ui, err := ai.ReadUpdateInformation()
 			if err == nil && ui != "" {
-				//log.Println("updateinformation:", ui)
+				// log.Println("updateinformation:", ui)
 				// log.Println("updateinformation:", url.QueryEscape(ui))
 				unescapedui, _ := url.QueryUnescape(ui)
 				// log.Println("updateinformation:", unescapedui)
